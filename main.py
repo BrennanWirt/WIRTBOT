@@ -8,18 +8,53 @@ import urllib.request
 import urllib.parse
 import re
 
-client = commands.Bot(command_prefix='!')
+client = commands.Bot(command_prefix='!', case_insensitive=True)
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-##Bootup message
-
+##Bootup message and change status
 
 @client.event
 async def on_ready():
     print('Hello World!')
+    await client.change_presence(activity=discord.Game(name="only fucking BANGERS"))
+
+##youtube search and download async function
+
+async def yt_dl(ctx, message, url):
+  song_there = os.path.isfile("song.webm")
+  try:
+      if song_there:
+          os.remove("song.webm")
+  except PermissionError:
+        await ctx.send("There is music playing already and there is no queue (shits hard bruh)")
+        return
+  channel = message.author.voice.channel
+  if not channel:
+      await message.send("You are not connected to a voice channel.")
+      return
+  voice = get(client.voice_clients, guild=ctx.guild)
+  if voice and voice.is_connected():
+      await voice.move_to(channel)
+  else:
+      voice = await channel.connect()
+
+  voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+
+  ydl_opts = {
+        'format': '249/250/251',
+    }
+  await ctx.send('Now playing '+ url)
+  with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+  for file in os.listdir("./"):
+        if file.endswith(".webm"):
+            os.rename(file, "song.webm")
+  voice.play(discord.FFmpegOpusAudio("song.webm"))
+
+
 
 
 ##Client commands for leaving pausing etc
@@ -31,7 +66,7 @@ async def leave(ctx):
     if voice.is_connected():
         await voice.disconnect()
     else:
-        await ctx.send("The bot is not connected to a voice channel.")
+        await ctx.send("I am not connected to a channel.")
 
 
 @client.command()
@@ -39,8 +74,9 @@ async def pause(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_playing():
         voice.pause()
+        await ctx.send("Music paused.")
     else:
-        await ctx.send("Currently no audio is playing.")
+        await ctx.send("No audio is playing.")
 
 
 @client.command()
@@ -48,6 +84,7 @@ async def resume(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_paused():
         voice.resume()
+        await ctx.send("Music resumed.")
     else:
         await ctx.send("The audio is not paused.")
 
@@ -56,6 +93,7 @@ async def resume(ctx):
 async def stop(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     voice.stop()
+    await ctx.send("Music stopped.")
 
 
 ##Main playing fuctions
@@ -74,39 +112,9 @@ async def play(ctx):
     print('THIS IS WORKING')
     ##see if message is a url
     if val2.startswith("http" or "www"):
-        print('THIS is WORKING 2')
-        song_there = os.path.isfile("song.webm")
         url = val2
-        try:
-            if song_there:
-                os.remove("song.webm")
-        except PermissionError:
-            await ctx.send(
-                "Wait for the current playing music to end or use the 'stop' command"
-            )
-            return
-        channel = message.author.voice.channel
-        if not channel:
-            await message.send("You are not connected to a voice channel")
-            return
-        voice = get(client.voice_clients, guild=ctx.guild)
-        if voice and voice.is_connected():
-            await voice.move_to(channel)
-        ##if not url, search input
-        else:
-            voice = await channel.connect()
-
-        voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-
-        ydl_opts = {
-            'format': '249/250/251',
-        }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        for file in os.listdir("./"):
-            if file.endswith(".webm"):
-                os.rename(file, "song.webm")
-        voice.play(discord.FFmpegOpusAudio("song.webm"))
+        print('THIS is WORKING 2')
+        await yt_dl(ctx, message, url)
 
     else:
         print(val2)
@@ -115,35 +123,8 @@ async def play(ctx):
             "https://www.youtube.com/results?search_query=" + search_keyword)
         video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
         url = ("https://www.youtube.com/watch?v=" + video_ids[0])
-
-        song_there = os.path.isfile("song.webm")
-        try:
-            if song_there:
-                os.remove("song.webm")
-        except PermissionError:
-            await ctx.send(
-                "Wait for the current playing music to end or use the 'stop' command"
-            )
-            return
-        channel = message.author.voice.channel
-        if not channel:
-            await ctx.send("You are not connected to a voice channel")
-            return
-        voice = get(client.voice_clients, guild=ctx.guild)
-        if voice and voice.is_connected():
-            await voice.move_to(channel)
-        else:
-            voice = await channel.connect()
-
-        voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-
-        ydl_opts = {'format': '249/250/251'}
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        for file in os.listdir("./"):
-            if file.endswith(".webm"):
-                os.rename(file, "song.webm")
-        voice.play(discord.FFmpegOpusAudio("song.webm"))
+        print(url)
+        await yt_dl(ctx, message, url)
 
 
 client.run(TOKEN)
