@@ -44,6 +44,7 @@ is_playing = False
 
 def length(url):
     global lent
+    global Pafy
     Pafy = pafy.new(url)
     lent = Pafy.length
     print(lent)
@@ -85,13 +86,16 @@ async def yt_dl(ctx, message, url):
       ydl_opts = {
           'format': '249/250/251',
       }
-      await ctx.send('Now playing ' + videos[0])
       with youtube_dl.YoutubeDL(ydl_opts) as ydl:
           ydl.download([videos[0]])
       for file in os.listdir("./"):
           if file.endswith(".webm"):
               os.rename(file, "song.webm")
       length(videos[0])
+      global Pafy
+      title = Pafy.title
+      author = Pafy.author
+      await ctx.send('Now playing ' + title + ' uploaded by ' + author)
       voice.play(discord.FFmpegOpusAudio("song.webm"))
       del videos[0]
       await duration()
