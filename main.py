@@ -176,7 +176,7 @@ async def skip(ctx):
         await ctx.send('Song Skipped!')
         await yt_dl(ctx, message, url)
     else:
-        ctx.send('there is nothing to skip to!')
+        await ctx.send('there is nothing to skip to!')
 
 
 client.run(TOKEN)
