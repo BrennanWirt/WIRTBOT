@@ -1,64 +1,117 @@
 import os
+import asyncio
 import youtube_dl
 import discord
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
-import urllib.request
-import urllib.parse
-import re
-
-client = commands.Bot(command_prefix='!', case_insensitive=True)
+import urllib.request, urllib.parse, re
+import pafy
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-##Bootup message and change status
+videos = []
+client = commands.Bot(command_prefix='!', case_insensitive=True)
+
+##asyncs and defs
 
 @client.event
 async def on_ready():
     print('Hello World!')
-    await client.change_presence(activity=discord.Game(name="only fucking BANGERS"))
+    if os.path.isfile("song.webm"):
+      os.remove("song.webm")
 
-##youtube search and download async function
+
+async def duration():
+    global is_playing
+    is_playing = True
+    await asyncio.sleep(lent)
+    is_playing = False
+
+is_playing = False
+
+
+def length(url):
+    global lent
+    Pafy = pafy.new(url)
+    lent = Pafy.length
+    print(lent)
+
+
+
+##queuelist function
+
+async def queuelist(ctx, message, url):
+    song_there = os.path.isfile("song.webm")
+    print('FUCK OFF')
+    if is_playing == False:
+        while len(videos) > 0:
+            if song_there == False:
+                await yt_dl(ctx, message, url)
+
+##download video via youtube-dl and play
 
 async def yt_dl(ctx, message, url):
-  song_there = os.path.isfile("song.webm")
-  try:
-      if song_there:
-          os.remove("song.webm")
-  except PermissionError:
-        await ctx.send("There is music playing already and there is no queue (shits hard bruh)")
+    channel = message.author.voice.channel
+    if not channel:
+        await message.send("You are not connected to a voice channel.")
         return
-  channel = message.author.voice.channel
-  if not channel:
-      await message.send("You are not connected to a voice channel.")
-      return
-  voice = get(client.voice_clients, guild=ctx.guild)
-  if voice and voice.is_connected():
-      await voice.move_to(channel)
-  else:
-      voice = await channel.connect()
+    voice = get(client.voice_clients, guild=ctx.guild)
+    if voice and voice.is_connected():
+        await voice.move_to(channel)
+    else:
+        voice = await channel.connect()
 
-  voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
 
-  ydl_opts = {
+    ydl_opts = {
         'format': '249/250/251',
     }
-  await ctx.send('Now playing '+ url)
-  with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-  for file in os.listdir("./"):
+    await ctx.send('Now playing ' + url)
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([videos[0]])
+    for file in os.listdir("./"):
         if file.endswith(".webm"):
             os.rename(file, "song.webm")
-  voice.play(discord.FFmpegOpusAudio("song.webm"))
+    voice.play(discord.FFmpegOpusAudio("song.webm"))
+    length(url)
+    del videos[0]
+    await duration()
+    if is_playing == False:
+        voice.stop()
+        try:
+            os.remove("song.webm")
+        except:
+            return
+
+##command to summon bot and play music
+
+@client.command()
+async def play(ctx):
+    message = ctx.message
+    print(message)
+    if message.content.startswith('htt' or 'www'):
+      val1 = message.content
+      url = val1
+      await queuelist(ctx, message, url)
+
+    else:
+      search = message.content
+      val1 = search.replace("!play", "")
+      val2 = val1.replace(" ", "")
+      print('THIS IS WORKING')
+      search_keyword = val2
+      html = urllib.request.urlopen(
+          "https://www.youtube.com/results?search_query=" + search_keyword)
+      video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
+      url = ("https://www.youtube.com/watch?v=" + video_ids[0])
+      videos.append(url)
+      await queuelist(ctx, message, url)
 
 
-
-
-##Client commands for leaving pausing etc
-
+#client commands (skip clear and such)
 
 @client.command()
 async def leave(ctx):
@@ -66,7 +119,7 @@ async def leave(ctx):
     if voice.is_connected():
         await voice.disconnect()
     else:
-        await ctx.send("I am not connected to a channel.")
+        await ctx.send("The bot is not connected to a voice channel.")
 
 
 @client.command()
@@ -74,9 +127,8 @@ async def pause(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_playing():
         voice.pause()
-        await ctx.send("Music paused.")
     else:
-        await ctx.send("No audio is playing.")
+        await ctx.send("Currently no audio is playing.")
 
 
 @client.command()
@@ -84,47 +136,49 @@ async def resume(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if voice.is_paused():
         voice.resume()
-        await ctx.send("Music resumed.")
     else:
         await ctx.send("The audio is not paused.")
 
+##PLEASE FIX- acts as skip and fucks with duration(), so temp making it a clear
 
 @client.command()
 async def stop(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    voice.stop()
-    await ctx.send("Music stopped.")
+    if len(videos) > 0:
+        videos.clear()
+        voice.stop()
+        await ctx.send("Music stopped!")
+    else:
+        await ctx.send('The queue is empty!')
 
-
-##Main playing fuctions
+@client.command()
+async def clear(ctx):
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    if len(videos) > 0:
+        videos.clear()
+        voice.stop()
+        await ctx.send("Queue cleared!")
+    else:
+        await ctx.send('The queue is empty!')
 
 
 @client.command()
-async def play(ctx):
+async def queue(ctx):
+    await ctx.send(videos)
+
+
+@client.command()
+async def skip(ctx):
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     message = ctx.message
-    print(message)
-    if ctx.author == client.user:
-        return
-
-    search = message.content
-    val1 = search.replace("!play", "")
-    val2 = val1.replace(" ", "")
-    print('THIS IS WORKING')
-    ##see if message is a url
-    if val2.startswith("http" or "www"):
-        url = val2
-        print('THIS is WORKING 2')
+    os.remove("song.webm")
+    if len(videos) > 0:
+        url = videos[0]
+        voice.stop()
+        await ctx.send('Song Skipped!')
         await yt_dl(ctx, message, url)
-
     else:
-        print(val2)
-        search_keyword = val2
-        html = urllib.request.urlopen(
-            "https://www.youtube.com/results?search_query=" + search_keyword)
-        video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-        url = ("https://www.youtube.com/watch?v=" + video_ids[0])
-        print(url)
-        await yt_dl(ctx, message, url)
+        ctx.send('there is nothing to skip to!')
 
 
 client.run(TOKEN)
