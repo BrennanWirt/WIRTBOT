@@ -45,7 +45,6 @@ def length(url):
 
 async def queuelist(ctx, message, url):
     song_there = os.path.isfile("song.webm")
-    print('FUCK OFF')
     if is_playing == False:
         while len(videos) > 0:
             if song_there == False:
@@ -101,7 +100,6 @@ async def play(ctx):
       search = message.content
       val1 = search.replace("!play", "")
       val2 = val1.replace(" ", "")
-      print('THIS IS WORKING')
       search_keyword = val2
       html = urllib.request.urlopen(
           "https://www.youtube.com/results?search_query=" + search_keyword)
