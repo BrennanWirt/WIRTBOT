@@ -61,7 +61,7 @@ async def queuelist(ctx, message, url):
             if song_there == False:
                 await yt_dl(ctx, message, url)
     if is_playing == True:
-        queuemsg = videos[0], 'Added to the queue!'
+        queuemsg = url, 'Added to the queue!'
         await ctx.send(queuemsg)
 
 
