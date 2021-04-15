@@ -32,11 +32,8 @@ async def duration():
     if is_playing == False:
         is_playing = True
         while True:
-          await asyncio.sleep(lent)
-          is_playing = False
-      
-
-
+            await asyncio.sleep(lent)
+            is_playing = False
 
 
 is_playing = False
@@ -69,42 +66,42 @@ async def queuelist(ctx, message, url):
 
 
 async def yt_dl(ctx, message, url):
-  if is_playing == False:
-      channel = message.author.voice.channel
-      length(videos[0])
-      if not channel:
-          await message.send("You are not connected to a voice channel.")
-          return
-      voice = get(client.voice_clients, guild=ctx.guild)
-      if voice and voice.is_connected():
-          await voice.move_to(channel)
-      else:
-          voice = await channel.connect()
+    if is_playing == False:
+        channel = message.author.voice.channel
+        length(videos[0])
+        if not channel:
+            await message.send("You are not connected to a voice channel.")
+            return
+        voice = get(client.voice_clients, guild=ctx.guild)
+        if voice and voice.is_connected():
+            await voice.move_to(channel)
+        else:
+            voice = await channel.connect()
 
-      voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+        voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
 
-      ydl_opts = {
-          'format': '249/250/251',
-      }
-      with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-          ydl.download([videos[0]])
-      for file in os.listdir("./"):
-          if file.endswith(".webm"):
-              os.rename(file, "song.webm")
-      length(videos[0])
-      global Pafy
-      title = Pafy.title
-      author = Pafy.author
-      await ctx.send('Now playing ' + title + ' uploaded by ' + author)
-      voice.play(discord.FFmpegOpusAudio("song.webm"))
-      del videos[0]
-      await duration()
-      if is_playing == False:
-          voice.stop()
-          try:
-              os.remove("song.webm")
-          except:
-              return
+        ydl_opts = {
+            'format': '249/250/251',
+        }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([videos[0]])
+        for file in os.listdir("./"):
+            if file.endswith(".webm"):
+                os.rename(file, "song.webm")
+        length(videos[0])
+        global Pafy
+        title = Pafy.title
+        author = Pafy.author
+        await ctx.send('Now playing ' + title + ' uploaded by ' + author)
+        voice.play(discord.FFmpegOpusAudio("song.webm"))
+        del videos[0]
+        await duration()
+        if is_playing == False:
+            voice.stop()
+            try:
+                os.remove("song.webm")
+            except:
+                return
 
 
 ##command to summon bot and play music
@@ -194,6 +191,18 @@ async def queue(ctx):
         await ctx.send(videos)
     else:
         await ctx.send('Theres is nothing left in the queue!')
+
+
+@client.command()
+async def remove(ctx):
+    message = ctx.message
+    num = message.content.replace('!remove', '')
+    try:
+        val = int(num) - 3
+        del videos[val]
+        await ctx.send('removed queue number' + val)
+    except ValueError:
+        await ctx.send('Use a number!')
 
 
 @client.command()
