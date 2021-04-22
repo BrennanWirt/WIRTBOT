@@ -109,7 +109,10 @@ async def yt_dl(ctx, message, url):
         print('music done')
         voice.stop()
         os.remove("song.webm")
-        await yt_dl(ctx, message, videos[0])
+        try:
+          await yt_dl(ctx, message, videos[0])
+        except:
+          return
 
             
 
@@ -210,9 +213,9 @@ async def remove(ctx):
     message = ctx.message
     num = message.content.replace('!remove', '')
     try:
-        val = int(num) - 3
+        val = int(num) - 1
         del videos[val]
-        await ctx.send('removed queue number' + val)
+        await ctx.send('removed queue number' + [val])
     except ValueError:
         await ctx.send('Use a number!')
 
