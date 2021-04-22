@@ -1,12 +1,16 @@
-import os
 import asyncio
-import youtube_dl
+import os
+import re
+import urllib.parse
+import urllib.request
+
+
 import discord
+import pafy
+import youtube_dl
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
-import urllib.request, urllib.parse, re
-import pafy
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -31,13 +35,14 @@ async def duration():
     global is_playing
     if is_playing == False:
         is_playing = True
-        while True:
+        while is_playing == True:
+            print('duration is true')
             await asyncio.sleep(lent)
+            print('duration is false')
             is_playing = False
 
 
 is_playing = False
-
 
 def length(url):
     global lent
@@ -66,7 +71,10 @@ async def queuelist(ctx, message, url):
 
 
 async def yt_dl(ctx, message, url):
-    if is_playing == False:
+  global is_playing
+  if len(videos) <0:
+    return
+  if is_playing == False:
         channel = message.author.voice.channel
         length(videos[0])
         if not channel:
@@ -95,13 +103,15 @@ async def yt_dl(ctx, message, url):
         await ctx.send('Now playing ' + title + ' uploaded by ' + author)
         voice.play(discord.FFmpegOpusAudio("song.webm"))
         del videos[0]
-        await duration()
-        if is_playing == False:
-            voice.stop()
-            try:
-                os.remove("song.webm")
-            except:
-                return
+        global wait
+        wait = asyncio.create_task(duration())
+        await wait
+        print('music done')
+        voice.stop()
+        os.remove("song.webm")
+        await yt_dl(ctx, message, videos[0])
+
+            
 
 
 ##command to summon bot and play music
@@ -163,11 +173,13 @@ async def stop(ctx):
     if len(videos) > 0:
         voice.stop()
         os.remove("song.webm")
+        wait.cancel()
         is_playing = False
         await ctx.send("Music stopped and queue cleared!")
     else:
         voice.stop()
         os.remove("song.webm")
+        wait.cancel()
         is_playing = False
         await ctx.send('Music stopped!')
 
@@ -210,19 +222,23 @@ async def skip(ctx):
     global is_playing
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     message = ctx.message
-    os.remove("song.webm")
     if len(videos) > 0:
         voice.stop()
         is_playing = False
+        wait.cancel()
+        os.remove('song.webm')
         length(videos[0])
         await ctx.send('Song Skipped!')
         await yt_dl(ctx, message, videos[0])
     else:
         voice.stop()
         is_playing = False
+        wait.cancel()
+        os.remove('song.webm')
         await ctx.send('There is nothing to skip to!')
 
 
 ##Use token from .ENV to start bot
 
 client.run(TOKEN)
+
